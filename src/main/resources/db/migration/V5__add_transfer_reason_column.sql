@@ -1,0 +1,1 @@
+ALTER TABLE transfer ADD COLUMN reason VARCHAR(255);
