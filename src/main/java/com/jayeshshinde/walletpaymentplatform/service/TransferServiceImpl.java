@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -31,18 +31,37 @@ public class TransferServiceImpl implements TransferService {
         if (transferDTO.getAmount() < 1) {
             throw new IllegalArgumentException("Amount must be greater than 0.");
         }
-
-        Wallet fromWallet = walletRepository.findById(transferDTO.getFromWalletId())
-                .orElseThrow(() -> new NoSuchElementException("From wallet not found."));
-        Wallet toWallet = walletRepository.findById(transferDTO.getToWalletId())
-                .orElseThrow(() -> new NoSuchElementException("To wallet not found."));
-        if (fromWallet.getBalance() < transferDTO.getAmount()) {
-            throw new IllegalArgumentException("Not enough balance to transfer.");
+        if (transferDTO.getFromWalletId().equals(transferDTO.getToWalletId())) {
+            throw new IllegalArgumentException("From Wallet Id must be different from to Wallet Id.");
         }
-        
-        validateWalletStatusForTransfer(fromWallet, toWallet);
 
-        Transfer saveTransfer = transferRepository.save(transferMapper.toTransfer(transferDTO));
+        List<UUID> walletIds = new ArrayList<>();
+        walletIds.add(transferDTO.getFromWalletId());
+        walletIds.add(transferDTO.getToWalletId());
+        walletIds.sort(Comparator.naturalOrder());
+        List<Wallet> wallets = new ArrayList<>();
+        for (UUID walletId : walletIds) {
+            wallets.add(walletRepository.findWithLockByWalletId(walletId)
+                    .orElseThrow(() -> new NoSuchElementException("wallet not found.")));
+        }
+        Transfer transfer = transferMapper.toTransfer(transferDTO);
+
+        Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferDTO.getFromWalletId(), LedgerEntryType.DEBIT);
+        boolean sufficientBalance = fromWalletBalance < transferDTO.getAmount();
+        if (sufficientBalance) {
+            transfer.applyStatusReason("insufficient_balance");
+        }
+        boolean walletStatusValidation = validateWalletStatusForTransfer(wallets.getFirst(), wallets.getLast());
+        if (walletStatusValidation) {
+            transfer.applyStatusReason("wallet_status_validation");
+        }
+
+        Transfer saveTransfer = transferRepository.save(transfer);
+        if (!walletStatusValidation || sufficientBalance) {
+            saveTransfer.failedTransfer();
+            return transferMapper.toTransferDTO(saveTransfer);
+        }
+
         saveTransfer.initiateTransfer();
         LedgerEntry debit = new LedgerEntry(saveTransfer.getId(),
                 LedgerEntryType.DEBIT,
@@ -54,15 +73,14 @@ public class TransferServiceImpl implements TransferService {
                 saveTransfer.getAmount(),
                 saveTransfer.getToWalletId());
         ledgerEntryRepository.save(credit);
+        saveTransfer.completeTransfer();
         return transferMapper.toTransferDTO(saveTransfer);
     }
 
-    private static void validateWalletStatusForTransfer(Wallet fromWallet, Wallet toWallet) {
-        if (fromWallet.getStatus() == WalletStatus.DEACTIVATED ||
-                toWallet.getStatus() == WalletStatus.DEACTIVATED ||
-                fromWallet.getStatus() == WalletStatus.PENDING_VERIFICATION ||
-                toWallet.getStatus() == WalletStatus.PENDING_VERIFICATION) {
-            throw new IllegalArgumentException("Either from wallet or to wallet is deactivated or PENDING VERIFICATION");
-        }
+    private static boolean validateWalletStatusForTransfer(Wallet wallet1, Wallet wallet2) {
+        return !(wallet1.getStatus() == WalletStatus.DEACTIVATED ||
+                wallet2.getStatus() == WalletStatus.DEACTIVATED ||
+                wallet2.getStatus() == WalletStatus.PENDING_VERIFICATION ||
+                wallet1.getStatus() == WalletStatus.PENDING_VERIFICATION);
     }
 }
