@@ -1,0 +1,14 @@
+services:
+  postgresql-db:
+    image: postgres:16-alpine
+    container_name: postgresql-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: walletplatform
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+volumes:
+  postgresql-data:

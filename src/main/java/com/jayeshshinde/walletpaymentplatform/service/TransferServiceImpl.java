@@ -41,7 +41,7 @@ public class TransferServiceImpl implements TransferService {
         walletIds.sort(Comparator.naturalOrder());
         List<Wallet> wallets = new ArrayList<>();
         for (UUID walletId : walletIds) {
-            wallets.add(walletRepository.findWithLockByWalletId(walletId)
+            wallets.add(walletRepository.findWithLockById(walletId)
                     .orElseThrow(() -> new NoSuchElementException("wallet not found.")));
         }
         Transfer transfer = transferMapper.toTransfer(transferDTO);
