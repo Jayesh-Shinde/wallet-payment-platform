@@ -4,7 +4,7 @@ import com.jayeshshinde.walletpaymentplatform.dtos.TransferDTO;
 import com.jayeshshinde.walletpaymentplatform.service.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.PessimisticLockException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -15,7 +15,7 @@ public class TransferRetryFacade {
     private final TransferService transferService;
 
     @Retryable(maxRetries = 3,
-            includes = {ObjectOptimisticLockingFailureException.class, PessimisticLockException.class},
+            includes = {ObjectOptimisticLockingFailureException.class, PessimisticLockingFailureException.class},
             delay = 500,
             multiplier = 2,
             jitter = 50)
