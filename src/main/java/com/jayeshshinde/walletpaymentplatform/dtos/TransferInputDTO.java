@@ -1,8 +1,11 @@
 package com.jayeshshinde.walletpaymentplatform.dtos;
 
-import com.jayeshshinde.walletpaymentplatform.enums.TransferStatus;
 import jakarta.validation.constraints.Min;
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
@@ -10,13 +13,11 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @Builder
-public class TransferDTO {
-    public UUID id;
-    @NonNull
+public class TransferInputDTO {
+    @NotNull
     public UUID fromWalletId;
-    @NonNull
+    @NotNull
     public UUID toWalletId;
     @Min(value = 1)
     public Long amount;
-    public TransferStatus status;
 }

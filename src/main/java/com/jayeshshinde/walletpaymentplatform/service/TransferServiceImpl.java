@@ -1,16 +1,17 @@
 package com.jayeshshinde.walletpaymentplatform.service;
 
-import com.jayeshshinde.walletpaymentplatform.dtos.TransferDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
 import com.jayeshshinde.walletpaymentplatform.entity.LedgerEntry;
 import com.jayeshshinde.walletpaymentplatform.entity.Transfer;
 import com.jayeshshinde.walletpaymentplatform.entity.Wallet;
 import com.jayeshshinde.walletpaymentplatform.enums.LedgerEntryType;
 import com.jayeshshinde.walletpaymentplatform.enums.WalletStatus;
-import com.jayeshshinde.walletpaymentplatform.mapper.TransferMapper;
+import com.jayeshshinde.walletpaymentplatform.mapper.TransferInputMapper;
+import com.jayeshshinde.walletpaymentplatform.mapper.TransferOutputMapper;
 import com.jayeshshinde.walletpaymentplatform.repository.LedgerEntryRepository;
 import com.jayeshshinde.walletpaymentplatform.repository.TransferRepository;
 import com.jayeshshinde.walletpaymentplatform.repository.WalletRepository;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,31 +24,32 @@ public class TransferServiceImpl implements TransferService {
     private final TransferRepository transferRepository;
     private final WalletRepository walletRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
-    private final TransferMapper transferMapper;
+    private final TransferInputMapper transferMapper;
+    private final TransferOutputMapper transferOutputMapper;
 
     @Override
     @Transactional
-    public TransferDTO createTransfer(@Valid TransferDTO transferDTO) {
-        if (transferDTO.getAmount() < 1) {
+    public TransferOutputDTO createTransfer(TransferInputDTO transferInputDTO) {
+        if (transferInputDTO.getAmount() < 1) {
             throw new IllegalArgumentException("Amount must be greater than 0.");
         }
-        if (transferDTO.getFromWalletId().equals(transferDTO.getToWalletId())) {
+        if (transferInputDTO.getFromWalletId().equals(transferInputDTO.getToWalletId())) {
             throw new IllegalArgumentException("From Wallet Id must be different from to Wallet Id.");
         }
 
         List<UUID> walletIds = new ArrayList<>();
-        walletIds.add(transferDTO.getFromWalletId());
-        walletIds.add(transferDTO.getToWalletId());
+        walletIds.add(transferInputDTO.getFromWalletId());
+        walletIds.add(transferInputDTO.getToWalletId());
         walletIds.sort(Comparator.naturalOrder());
         List<Wallet> wallets = new ArrayList<>();
         for (UUID walletId : walletIds) {
             wallets.add(walletRepository.findWithLockById(walletId)
                     .orElseThrow(() -> new NoSuchElementException("wallet not found.")));
         }
-        Transfer transfer = transferMapper.toTransfer(transferDTO);
+        Transfer transfer = transferMapper.toTransfer(transferInputDTO);
 
-        Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferDTO.getFromWalletId(), LedgerEntryType.DEBIT);
-        boolean sufficientBalance = fromWalletBalance < transferDTO.getAmount();
+        Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.getFromWalletId(), LedgerEntryType.DEBIT);
+        boolean sufficientBalance = fromWalletBalance < transferInputDTO.getAmount();
         if (sufficientBalance) {
             transfer.applyStatusReason("insufficient_balance");
         }
@@ -59,7 +61,7 @@ public class TransferServiceImpl implements TransferService {
         Transfer saveTransfer = transferRepository.save(transfer);
         if (!walletStatusValidation || sufficientBalance) {
             saveTransfer.failedTransfer();
-            return transferMapper.toTransferDTO(saveTransfer);
+            return transferOutputMapper.toTransferOutputDTO(saveTransfer);
         }
 
         saveTransfer.initiateTransfer();
@@ -74,7 +76,7 @@ public class TransferServiceImpl implements TransferService {
                 saveTransfer.getToWalletId());
         ledgerEntryRepository.save(credit);
         saveTransfer.completeTransfer();
-        return transferMapper.toTransferDTO(saveTransfer);
+        return transferOutputMapper.toTransferOutputDTO(saveTransfer);
     }
 
     private static boolean validateWalletStatusForTransfer(Wallet wallet1, Wallet wallet2) {

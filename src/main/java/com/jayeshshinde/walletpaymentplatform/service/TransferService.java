@@ -1,8 +1,9 @@
 package com.jayeshshinde.walletpaymentplatform.service;
 
-import com.jayeshshinde.walletpaymentplatform.dtos.TransferDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
 import jakarta.validation.Valid;
 
 public interface TransferService {
-    TransferDTO createTransfer(@Valid TransferDTO transferDTO);
+    TransferOutputDTO createTransfer(@Valid TransferInputDTO transferInputDTO);
 }
