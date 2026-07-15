@@ -1,6 +1,7 @@
 package com.jayeshshinde.walletpaymentplatform.component;
 
-import com.jayeshshinde.walletpaymentplatform.dtos.TransferDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
 import com.jayeshshinde.walletpaymentplatform.service.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class TransferRetryFacade {
             delay = 500,
             multiplier = 2,
             jitter = 50)
-    public TransferDTO createTransfer(@Valid TransferDTO transferDTO) {
-        return transferService.createTransfer(transferDTO);
+    public TransferOutputDTO createTransfer(@Valid TransferInputDTO transferInputDTO) {
+        return transferService.createTransfer(transferInputDTO);
     }
 }

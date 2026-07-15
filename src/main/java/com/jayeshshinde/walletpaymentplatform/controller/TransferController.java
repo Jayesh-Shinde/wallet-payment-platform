@@ -1,7 +1,9 @@
 package com.jayeshshinde.walletpaymentplatform.controller;
 
 import com.jayeshshinde.walletpaymentplatform.component.TransferRetryFacade;
-import com.jayeshshinde.walletpaymentplatform.dtos.TransferDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
+import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,7 +15,7 @@ public class TransferController {
     private final TransferRetryFacade transferRetryFacade;
 
     @PostMapping("/api/transfer")
-    public TransferDTO createTransfer(@RequestBody TransferDTO transferDTO) {
-        return transferRetryFacade.createTransfer(transferDTO);
+    public TransferOutputDTO createTransfer(@Valid @RequestBody TransferInputDTO transferInputDTO) {
+        return transferRetryFacade.createTransfer(transferInputDTO);
     }
 }
