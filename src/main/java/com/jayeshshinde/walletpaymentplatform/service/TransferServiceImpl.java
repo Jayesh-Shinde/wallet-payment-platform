@@ -8,6 +8,7 @@ import com.jayeshshinde.walletpaymentplatform.entity.Transfer;
 import com.jayeshshinde.walletpaymentplatform.entity.Wallet;
 import com.jayeshshinde.walletpaymentplatform.enums.LedgerEntryType;
 import com.jayeshshinde.walletpaymentplatform.enums.WalletStatus;
+import com.jayeshshinde.walletpaymentplatform.enums.WalletType;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferInputMapper;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferOutputMapper;
 import com.jayeshshinde.walletpaymentplatform.repository.IdempotencyRecordRepository;
@@ -46,25 +47,37 @@ public class TransferServiceImpl implements TransferService {
         walletIds.add(transferInputDTO.getFromWalletId());
         walletIds.add(transferInputDTO.getToWalletId());
         walletIds.sort(Comparator.naturalOrder());
-        List<Wallet> wallets = new ArrayList<>();
+        Wallet fromWallet = null;
+        Wallet toWallet = null;
         for (UUID walletId : walletIds) {
-            wallets.add(walletRepository.findWithLockById(walletId)
-                    .orElseThrow(() -> new NoSuchElementException("wallet not found.")));
+            var wallet = walletRepository.findWithLockById(walletId)
+                    .orElseThrow(() -> new NoSuchElementException("wallet not found."));
+            if (walletId.equals(transferInputDTO.getFromWalletId())) {
+                fromWallet = wallet;
+            }
+            if (walletId.equals(transferInputDTO.getToWalletId())) {
+                toWallet = wallet;
+            }
         }
         Transfer transfer = transferMapper.toTransfer(transferInputDTO);
+        boolean sufficientBalance;
+        if (fromWallet.getWalletType().equals(WalletType.SYSTEM)) {
+            sufficientBalance = true;
+        } else {
+            Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.getFromWalletId(), LedgerEntryType.DEBIT);
+            sufficientBalance = fromWalletBalance < transferInputDTO.getAmount();
+        }
 
-        Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.getFromWalletId(), LedgerEntryType.DEBIT);
-        boolean sufficientBalance = fromWalletBalance < transferInputDTO.getAmount();
-        if (sufficientBalance) {
+        if (!sufficientBalance) {
             transfer.applyStatusReason("insufficient_balance");
         }
-        boolean walletStatusValidation = validateWalletStatusForTransfer(wallets.getFirst(), wallets.getLast());
+        boolean walletStatusValidation = validateWalletStatusForTransfer(fromWallet, toWallet);
         if (!walletStatusValidation) {
             transfer.applyStatusReason("wallet_status_validation");
         }
 
         Transfer saveTransfer = transferRepository.save(transfer);
-        if (!walletStatusValidation || sufficientBalance) {
+        if (!walletStatusValidation || !sufficientBalance) {
             saveTransfer.failedTransfer();
             return transferOutputMapper.toTransferOutputDTO(saveTransfer);
         }
@@ -88,10 +101,19 @@ public class TransferServiceImpl implements TransferService {
 
     }
 
-    private static boolean validateWalletStatusForTransfer(Wallet wallet1, Wallet wallet2) {
-        return !(wallet1.getStatus() == WalletStatus.DEACTIVATED ||
-                wallet2.getStatus() == WalletStatus.DEACTIVATED ||
-                wallet2.getStatus() == WalletStatus.PENDING_VERIFICATION ||
-                wallet1.getStatus() == WalletStatus.PENDING_VERIFICATION);
+    public void checkWalletType(UUID fromWalletId, UUID toWalletId) {
+        Wallet toWallet = walletRepository.findById(toWalletId).orElseThrow(() -> new NoSuchElementException("toWallet wallet not found."));
+        Wallet fromWallet = walletRepository.findById(fromWalletId).orElseThrow(() -> new NoSuchElementException("fromWallet wallet not found."));
+        if (toWallet.getWalletType() == WalletType.SYSTEM ||
+                fromWallet.getWalletType() == WalletType.SYSTEM) {
+            throw new IllegalArgumentException("System type wallet can not be used.");
+        }
+    }
+
+    private static boolean validateWalletStatusForTransfer(Wallet fromWallet, Wallet toWallet) {
+        return !(fromWallet.getStatus() == WalletStatus.DEACTIVATED ||
+                toWallet.getStatus() == WalletStatus.DEACTIVATED ||
+                fromWallet.getStatus() == WalletStatus.PENDING_VERIFICATION ||
+                toWallet.getStatus() == WalletStatus.PENDING_VERIFICATION);
     }
 }

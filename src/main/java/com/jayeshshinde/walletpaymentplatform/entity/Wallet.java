@@ -1,8 +1,11 @@
 package com.jayeshshinde.walletpaymentplatform.entity;
 
 import com.jayeshshinde.walletpaymentplatform.enums.WalletStatus;
+import com.jayeshshinde.walletpaymentplatform.enums.WalletType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -22,26 +25,34 @@ public class Wallet {
     @Enumerated(EnumType.STRING)
     private WalletStatus status;
     private UUID lastReconciledLedgerEntryId;
-    private Long balance= 0L;
+    private Long balance = 0L;
+    @Enumerated(EnumType.STRING)
+    private WalletType walletType;
     @CreationTimestamp
     private LocalDateTime createdAt;
     @UpdateTimestamp
     private LocalDateTime updatedAt;
     private String createdBy;
     private String updatedBy;
+
     public Wallet(UUID userId) {
         this.userId = userId;
+        this.walletType = WalletType.USER;
         pendingVerification();
     }
+
     public void applyReconciledBalance(long newBalance) {
         this.balance = newBalance;
     }
+
     public void deactivate() {
         this.status = WalletStatus.DEACTIVATED;
     }
+
     public void pendingVerification() {
         this.status = WalletStatus.PENDING_VERIFICATION;
     }
+
     public void activate() {
         this.status = WalletStatus.ACTIVE;
     }
