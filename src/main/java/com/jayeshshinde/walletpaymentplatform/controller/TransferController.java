@@ -6,8 +6,11 @@ import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -15,7 +18,11 @@ public class TransferController {
     private final TransferRetryFacade transferRetryFacade;
 
     @PostMapping("/api/transfer")
-    public TransferOutputDTO createTransfer(@Valid @RequestBody TransferInputDTO transferInputDTO) {
-        return transferRetryFacade.createTransfer(transferInputDTO);
+
+    public TransferOutputDTO createTransfer(
+            @Valid @RequestBody TransferInputDTO transferInputDTO,
+            @RequestAttribute(value = "X-Idempotency-Key", required = true) UUID idempotencyKey
+    ) {
+        return transferRetryFacade.createTransfer(transferInputDTO, idempotencyKey);
     }
 }
