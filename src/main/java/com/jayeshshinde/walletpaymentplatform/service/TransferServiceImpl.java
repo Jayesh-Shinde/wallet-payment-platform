@@ -2,6 +2,7 @@ package com.jayeshshinde.walletpaymentplatform.service;
 
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
+import com.jayeshshinde.walletpaymentplatform.entity.IdempotencyRecord;
 import com.jayeshshinde.walletpaymentplatform.entity.LedgerEntry;
 import com.jayeshshinde.walletpaymentplatform.entity.Transfer;
 import com.jayeshshinde.walletpaymentplatform.entity.Wallet;
@@ -9,12 +10,14 @@ import com.jayeshshinde.walletpaymentplatform.enums.LedgerEntryType;
 import com.jayeshshinde.walletpaymentplatform.enums.WalletStatus;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferInputMapper;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferOutputMapper;
+import com.jayeshshinde.walletpaymentplatform.repository.IdempotencyRecordRepository;
 import com.jayeshshinde.walletpaymentplatform.repository.LedgerEntryRepository;
 import com.jayeshshinde.walletpaymentplatform.repository.TransferRepository;
 import com.jayeshshinde.walletpaymentplatform.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 
@@ -24,19 +27,21 @@ public class TransferServiceImpl implements TransferService {
     private final TransferRepository transferRepository;
     private final WalletRepository walletRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
+    private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final TransferInputMapper transferMapper;
     private final TransferOutputMapper transferOutputMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
-    public TransferOutputDTO createTransfer(TransferInputDTO transferInputDTO) {
+    public TransferOutputDTO createTransfer(TransferInputDTO transferInputDTO, UUID idempotencyKey) {
         if (transferInputDTO.getAmount() < 1) {
             throw new IllegalArgumentException("Amount must be greater than 0.");
         }
         if (transferInputDTO.getFromWalletId().equals(transferInputDTO.getToWalletId())) {
             throw new IllegalArgumentException("From Wallet Id must be different from to Wallet Id.");
         }
-
+        IdempotencyRecord idempotencyRecord = idempotencyRecordRepository.getReferenceById(idempotencyKey);
         List<UUID> walletIds = new ArrayList<>();
         walletIds.add(transferInputDTO.getFromWalletId());
         walletIds.add(transferInputDTO.getToWalletId());
@@ -54,7 +59,7 @@ public class TransferServiceImpl implements TransferService {
             transfer.applyStatusReason("insufficient_balance");
         }
         boolean walletStatusValidation = validateWalletStatusForTransfer(wallets.getFirst(), wallets.getLast());
-        if (walletStatusValidation) {
+        if (!walletStatusValidation) {
             transfer.applyStatusReason("wallet_status_validation");
         }
 
@@ -76,7 +81,11 @@ public class TransferServiceImpl implements TransferService {
                 saveTransfer.getToWalletId());
         ledgerEntryRepository.save(credit);
         saveTransfer.completeTransfer();
-        return transferOutputMapper.toTransferOutputDTO(saveTransfer);
+        var response = transferOutputMapper.toTransferOutputDTO(saveTransfer);
+
+        idempotencyRecord.setResponseData(objectMapper.valueToTree(response));
+        return response;
+
     }
 
     private static boolean validateWalletStatusForTransfer(Wallet wallet1, Wallet wallet2) {
