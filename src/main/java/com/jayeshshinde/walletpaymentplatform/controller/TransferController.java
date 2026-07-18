@@ -1,6 +1,6 @@
 package com.jayeshshinde.walletpaymentplatform.controller;
 
-import com.jayeshshinde.walletpaymentplatform.component.TransferRetryFacade;
+import com.jayeshshinde.walletpaymentplatform.component.TransferOrchestrator;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
 import jakarta.validation.Valid;
@@ -15,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 public class TransferController {
-    private final TransferRetryFacade transferRetryFacade;
+    private final TransferOrchestrator transferOrchestrator;
 
     @PostMapping("/api/transfer")
 
@@ -23,6 +23,6 @@ public class TransferController {
             @Valid @RequestBody TransferInputDTO transferInputDTO,
             @RequestAttribute(value = "X-Idempotency-Key", required = true) UUID idempotencyKey
     ) {
-        return transferRetryFacade.createTransfer(transferInputDTO, idempotencyKey);
+        return transferOrchestrator.createTransfer(transferInputDTO, idempotencyKey);
     }
 }

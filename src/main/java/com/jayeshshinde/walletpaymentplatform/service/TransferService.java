@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface TransferService {
     TransferOutputDTO createTransfer(@Valid TransferInputDTO transferInputDTO, UUID idempotency_key);
+
+    void checkWalletType(UUID fromWalletId, UUID toWalletId);
 }
