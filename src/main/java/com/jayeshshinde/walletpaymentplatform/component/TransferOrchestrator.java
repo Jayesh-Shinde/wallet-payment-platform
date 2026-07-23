@@ -2,11 +2,11 @@ package com.jayeshshinde.walletpaymentplatform.component;
 
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
+import com.jayeshshinde.walletpaymentplatform.exceptions.IdempotencyKeyConflictException;
 import com.jayeshshinde.walletpaymentplatform.exceptions.ReplayNotReadyException;
 import com.jayeshshinde.walletpaymentplatform.service.TransferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.resilience.annotation.Retryable;
@@ -33,7 +33,7 @@ public class TransferOrchestrator {
             idempotencyService.tryInsert(idempotencyKey);
             transferService.checkWalletType(transferInputDTO.fromWalletId(), transferInputDTO.toWalletId());
             return transferService.createTransfer(transferInputDTO, idempotencyKey);
-        } catch (DataIntegrityViolationException e) {
+        } catch (IdempotencyKeyConflictException e) {
             var jsonNode = idempotencyService.findById(idempotencyKey).getResponseData();
             if (jsonNode == null) {
                 throw new ReplayNotReadyException("this exact operation is still in flight — wait and retry the same key ");
