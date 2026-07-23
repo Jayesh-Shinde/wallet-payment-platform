@@ -1,27 +1,17 @@
 package com.jayeshshinde.walletpaymentplatform.dtos;
 
 import com.jayeshshinde.walletpaymentplatform.enums.TransferStatus;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-@AllArgsConstructor
-@Data
-@NoArgsConstructor
-@Builder
-public class TransferOutputDTO {
+public record TransferOutputDTO(
+        @NotNull UUID id,
+        @NotNull UUID fromWalletId,
+        @NotNull UUID toWalletId,
+        @NotNull Long amount,
+        @NotNull TransferStatus status,
+        String reason
+) {
 
-    public UUID id;
-
-    public UUID fromWalletId;
-
-    public UUID toWalletId;
-
-    public Long amount;
-
-    public TransferStatus status;
-    public String reason;
 }

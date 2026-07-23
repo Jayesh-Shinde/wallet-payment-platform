@@ -36,26 +36,24 @@ public class TransferServiceImpl implements TransferService {
     @Override
     @Transactional
     public TransferOutputDTO createTransfer(TransferInputDTO transferInputDTO, UUID idempotencyKey) {
-        if (transferInputDTO.getAmount() < 1) {
+        if (transferInputDTO.amount() < 1) {
             throw new IllegalArgumentException("Amount must be greater than 0.");
         }
-        if (transferInputDTO.getFromWalletId().equals(transferInputDTO.getToWalletId())) {
-            throw new IllegalArgumentException("From Wallet Id must be different from to Wallet Id.");
-        }
+
         IdempotencyRecord idempotencyRecord = idempotencyRecordRepository.getReferenceById(idempotencyKey);
         List<UUID> walletIds = new ArrayList<>();
-        walletIds.add(transferInputDTO.getFromWalletId());
-        walletIds.add(transferInputDTO.getToWalletId());
+        walletIds.add(transferInputDTO.fromWalletId());
+        walletIds.add(transferInputDTO.toWalletId());
         walletIds.sort(Comparator.naturalOrder());
         Wallet fromWallet = null;
         Wallet toWallet = null;
         for (UUID walletId : walletIds) {
             var wallet = walletRepository.findWithLockById(walletId)
                     .orElseThrow(() -> new NoSuchElementException("wallet not found."));
-            if (walletId.equals(transferInputDTO.getFromWalletId())) {
+            if (walletId.equals(transferInputDTO.fromWalletId())) {
                 fromWallet = wallet;
             }
-            if (walletId.equals(transferInputDTO.getToWalletId())) {
+            if (walletId.equals(transferInputDTO.toWalletId())) {
                 toWallet = wallet;
             }
         }
@@ -64,8 +62,8 @@ public class TransferServiceImpl implements TransferService {
         if (fromWallet.getWalletType().equals(WalletType.SYSTEM)) {
             sufficientBalance = true;
         } else {
-            Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.getFromWalletId(), LedgerEntryType.DEBIT);
-            sufficientBalance = fromWalletBalance < transferInputDTO.getAmount();
+            Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.fromWalletId(), LedgerEntryType.DEBIT);
+            sufficientBalance = fromWalletBalance >= transferInputDTO.amount();
         }
 
         if (!sufficientBalance) {
@@ -102,12 +100,19 @@ public class TransferServiceImpl implements TransferService {
     }
 
     public void checkWalletType(UUID fromWalletId, UUID toWalletId) {
-        Wallet toWallet = walletRepository.findById(toWalletId).orElseThrow(() -> new NoSuchElementException("toWallet wallet not found."));
-        Wallet fromWallet = walletRepository.findById(fromWalletId).orElseThrow(() -> new NoSuchElementException("fromWallet wallet not found."));
-        if (toWallet.getWalletType() == WalletType.SYSTEM ||
-                fromWallet.getWalletType() == WalletType.SYSTEM) {
-            throw new IllegalArgumentException("System type wallet can not be used.");
+
+        if (fromWalletId.equals(toWalletId)) {
+            throw new IllegalArgumentException("From Wallet Id must be different from to Wallet Id.");
         }
+        List<Wallet> allById = walletRepository.findAllById(List.of(fromWalletId, toWalletId));
+        if (allById.size() < 2) {
+            throw new NoSuchElementException("wallet not found.");
+        }
+        allById.forEach(wallet -> {
+            if (wallet.getWalletType().equals(WalletType.SYSTEM)) {
+                throw new IllegalArgumentException("Wallet Type must not be SYSTEM.");
+            }
+        });
     }
 
     private static boolean validateWalletStatusForTransfer(Wallet fromWallet, Wallet toWallet) {
