@@ -1,8 +1,8 @@
-package com.jayeshshinde.walletpaymentplatform.component;
+package com.jayeshshinde.walletpaymentplatform.service;
 
+import com.jayeshshinde.walletpaymentplatform.component.IdempotencyService;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
-import com.jayeshshinde.walletpaymentplatform.service.TransferService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
