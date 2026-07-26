@@ -62,7 +62,7 @@ public class TransferServiceImpl implements TransferService {
         if (fromWallet.getWalletType().equals(WalletType.SYSTEM)) {
             sufficientBalance = true;
         } else {
-            Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.fromWalletId(), LedgerEntryType.DEBIT);
+            Long fromWalletBalance = ledgerEntryRepository.calculateBalanceByWalletId(transferInputDTO.fromWalletId());
             sufficientBalance = fromWalletBalance >= transferInputDTO.amount();
         }
 

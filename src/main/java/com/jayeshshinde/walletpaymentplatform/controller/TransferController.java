@@ -18,7 +18,6 @@ public class TransferController {
     private final TransferOrchestrator transferOrchestrator;
 
     @PostMapping("/api/transfer")
-
     public TransferOutputDTO createTransfer(
             @Valid @RequestBody TransferInputDTO transferInputDTO,
             @RequestAttribute(value = "X-Idempotency-Key", required = true) UUID idempotencyKey
