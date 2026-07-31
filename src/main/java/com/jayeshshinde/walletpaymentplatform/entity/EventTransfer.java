@@ -1,0 +1,85 @@
+package com.jayeshshinde.walletpaymentplatform.entity;
+
+import com.jayeshshinde.walletpaymentplatform.enums.EventTransferStatus;
+import com.jayeshshinde.walletpaymentplatform.enums.EventTransferType;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+import tools.jackson.databind.JsonNode;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+public class EventTransfer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+    @Enumerated(EnumType.STRING)
+    private EventTransferType eventType;
+    private UUID transferId;
+    @Enumerated(EnumType.STRING)
+    private EventTransferStatus status;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private JsonNode payload;
+    private int attempts;
+    private String lastError;
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
+    public EventTransfer(EventTransferType eventType, UUID transferId, JsonNode payload) {
+        this.eventType = eventType;
+        this.transferId = transferId;
+        this.payload = payload;
+        this.status = EventTransferStatus.PENDING;
+    }
+
+    public void setLastError(String lastError) {
+        if (this.status != EventTransferStatus.PROCESSED) {
+            this.lastError = lastError;
+        } else {
+            throw new IllegalStateException("Cannot set last error as status is PROCESSED");
+        }
+
+    }
+
+    public void markProcessed() {
+        if (status == EventTransferStatus.PENDING || status == EventTransferStatus.DEAD_LETTER) {
+            this.status = EventTransferStatus.PROCESSED;
+        } else {
+            throw new IllegalStateException("Event transfer has already been processed or in incorrect state");
+        }
+
+    }
+
+    public void markFailed() {
+        if (this.status == EventTransferStatus.PENDING || this.status == EventTransferStatus.DEAD_LETTER) {
+            this.status = EventTransferStatus.FAILED;
+        } else {
+            throw new IllegalStateException("Event transfer status can not be marked failed as it is completed");
+        }
+    }
+
+    public void markDeadLettered() {
+        if (this.status == EventTransferStatus.PENDING) {
+            this.status = EventTransferStatus.DEAD_LETTER;
+        } else {
+            throw new IllegalStateException("Event transfer status can not be marked as dead lettered because it is in incorrect state");
+        }
+    }
+
+    public void incrementAttempts() {
+        this.attempts++;
+        if (this.attempts == 3) {
+            this.status = EventTransferStatus.DEAD_LETTER;
+        }
+    }
+}

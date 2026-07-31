@@ -1,23 +1,20 @@
 package com.jayeshshinde.walletpaymentplatform.service;
 
+import com.jayeshshinde.walletpaymentplatform.dtos.EventTransferPayload;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferInputDTO;
 import com.jayeshshinde.walletpaymentplatform.dtos.TransferOutputDTO;
-import com.jayeshshinde.walletpaymentplatform.entity.IdempotencyRecord;
-import com.jayeshshinde.walletpaymentplatform.entity.LedgerEntry;
-import com.jayeshshinde.walletpaymentplatform.entity.Transfer;
-import com.jayeshshinde.walletpaymentplatform.entity.Wallet;
+import com.jayeshshinde.walletpaymentplatform.entity.*;
+import com.jayeshshinde.walletpaymentplatform.enums.EventTransferType;
 import com.jayeshshinde.walletpaymentplatform.enums.LedgerEntryType;
 import com.jayeshshinde.walletpaymentplatform.enums.WalletStatus;
 import com.jayeshshinde.walletpaymentplatform.enums.WalletType;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferInputMapper;
 import com.jayeshshinde.walletpaymentplatform.mapper.TransferOutputMapper;
-import com.jayeshshinde.walletpaymentplatform.repository.IdempotencyRecordRepository;
-import com.jayeshshinde.walletpaymentplatform.repository.LedgerEntryRepository;
-import com.jayeshshinde.walletpaymentplatform.repository.TransferRepository;
-import com.jayeshshinde.walletpaymentplatform.repository.WalletRepository;
+import com.jayeshshinde.walletpaymentplatform.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
@@ -32,6 +29,7 @@ public class TransferServiceImpl implements TransferService {
     private final TransferInputMapper transferMapper;
     private final TransferOutputMapper transferOutputMapper;
     private final ObjectMapper objectMapper;
+    private final EventTransferRepository eventTransferRepository;
 
     @Override
     @Transactional
@@ -95,6 +93,9 @@ public class TransferServiceImpl implements TransferService {
         var response = transferOutputMapper.toTransferOutputDTO(saveTransfer);
 
         idempotencyRecord.setResponseData(objectMapper.valueToTree(response));
+        JsonNode jsonNode = objectMapper.valueToTree(new EventTransferPayload(saveTransfer.getFromWalletId(), saveTransfer.getToWalletId(), saveTransfer.getAmount()));
+        EventTransfer eventTransfer = new EventTransfer(EventTransferType.TRANSFER_COMPLETE, saveTransfer.getId(), jsonNode);
+        eventTransferRepository.save(eventTransfer);
         return response;
 
     }
