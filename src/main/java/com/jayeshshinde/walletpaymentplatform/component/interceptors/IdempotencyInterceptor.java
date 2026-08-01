@@ -1,4 +1,4 @@
-package com.jayeshshinde.walletpaymentplatform.component;
+package com.jayeshshinde.walletpaymentplatform.component.interceptors;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
