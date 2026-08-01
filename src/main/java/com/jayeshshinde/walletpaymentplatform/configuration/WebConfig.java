@@ -1,6 +1,6 @@
 package com.jayeshshinde.walletpaymentplatform.configuration;
 
-import com.jayeshshinde.walletpaymentplatform.component.IdempotencyInterceptor;
+import com.jayeshshinde.walletpaymentplatform.component.interceptors.IdempotencyInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

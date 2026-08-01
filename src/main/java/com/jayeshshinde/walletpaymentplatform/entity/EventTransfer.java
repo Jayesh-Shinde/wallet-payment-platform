@@ -30,6 +30,7 @@ public class EventTransfer {
     private JsonNode payload;
     private int attempts;
     private String lastError;
+    private LocalDateTime claimedExpiry;
     @CreationTimestamp
     private LocalDateTime createdAt;
     @UpdateTimestamp
@@ -40,6 +41,7 @@ public class EventTransfer {
         this.transferId = transferId;
         this.payload = payload;
         this.status = EventTransferStatus.PENDING;
+        this.attempts = 0;
     }
 
     public void setLastError(String lastError) {
@@ -51,8 +53,16 @@ public class EventTransfer {
 
     }
 
+    public void markClaimed() {
+        if (this.status == EventTransferStatus.PENDING) {
+            this.status = EventTransferStatus.CLAIMED;
+        } else {
+            throw new IllegalStateException("Event transfer has already been processed or in incorrect state");
+        }
+    }
+
     public void markProcessed() {
-        if (status == EventTransferStatus.PENDING || status == EventTransferStatus.DEAD_LETTER) {
+        if (status == EventTransferStatus.PENDING || status == EventTransferStatus.DEAD_LETTER || status == EventTransferStatus.CLAIMED) {
             this.status = EventTransferStatus.PROCESSED;
         } else {
             throw new IllegalStateException("Event transfer has already been processed or in incorrect state");
@@ -80,6 +90,13 @@ public class EventTransfer {
         this.attempts++;
         if (this.attempts == 3) {
             this.status = EventTransferStatus.DEAD_LETTER;
+        } else {
+            this.status = EventTransferStatus.PENDING;
         }
+        this.claimedExpiry = null;
+    }
+
+    public void clearClaimedExpiry() {
+        this.claimedExpiry = null;
     }
 }

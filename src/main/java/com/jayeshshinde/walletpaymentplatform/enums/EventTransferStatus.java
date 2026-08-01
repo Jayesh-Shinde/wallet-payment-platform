@@ -4,5 +4,6 @@ public enum EventTransferStatus {
     PENDING,
     PROCESSED,
     FAILED,
-    DEAD_LETTER
+    DEAD_LETTER,
+    CLAIMED
 }
