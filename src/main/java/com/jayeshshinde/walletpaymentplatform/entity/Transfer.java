@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -25,9 +25,9 @@ public class Transfer {
     private TransferStatus status = TransferStatus.INITIATED;
     private String reason;
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
     private String createdBy; //TODO: JPA Auditing
     private String updatedBy;//TODO: JPA Auditing
 

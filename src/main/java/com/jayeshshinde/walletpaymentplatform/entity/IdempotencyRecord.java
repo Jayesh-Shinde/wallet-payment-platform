@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Persistable;
 import tools.jackson.databind.JsonNode;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -26,9 +26,9 @@ public class IdempotencyRecord implements Persistable<UUID> {
     @Setter
     private JsonNode responseData;
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public IdempotencyRecord(UUID idempotencyKey) {
         this.idempotencyKey = idempotencyKey;
