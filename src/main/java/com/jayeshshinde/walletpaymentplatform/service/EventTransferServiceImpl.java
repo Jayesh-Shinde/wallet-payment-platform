@@ -21,7 +21,7 @@ public class EventTransferServiceImpl implements EventTransferService {
     public List<EventTransfer> claimTransferCompleteEvent() {
         List<EventTransfer> claimedPayload = eventTransferRepository.fetchClaimTransferCompleteEvent(Instant.now(), 5);
         List<UUID> claimedUuids = claimedPayload.stream().map(EventTransfer::getId).toList();
-        eventTransferRepository.claimTransferCompleteEvent(claimedUuids, Instant.now(), Instant.now());
+        eventTransferRepository.claimTransferCompleteEvent(claimedUuids, Instant.now().plusSeconds(60), Instant.now());
         return claimedPayload;
     }
 

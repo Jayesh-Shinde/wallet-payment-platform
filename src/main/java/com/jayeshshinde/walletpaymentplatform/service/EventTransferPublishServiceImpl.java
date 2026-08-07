@@ -13,15 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventTransferPublishServiceImpl implements EventTransferPublishService {
     private final EventTransferRepository eventTransferRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final String transferCompleteTopic = "transfer_complete";
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void publishTransferCompleteEvent(EventTransfer eventTransfer) {
         try {
+            String transferCompleteTopic = "transfer_complete";
             kafkaTemplate.send(transferCompleteTopic, eventTransfer.getTransferId().toString(), eventTransfer.getPayload().toString());
             eventTransfer.markProcessed();
         } catch (Exception e) {
+            System.out.println("Error while sending transfer complete event " + e.getMessage());
             eventTransfer.incrementAttempts();
         } finally {
             eventTransferRepository.save(eventTransfer);

@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -22,7 +22,7 @@ public class LedgerEntry {
     private UUID walletId;
     private Long amount;
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private String createdBy; //TODO: JPA Auditing
 
     public LedgerEntry(UUID transferId, LedgerEntryType entryType, Long amount, UUID walletId) {

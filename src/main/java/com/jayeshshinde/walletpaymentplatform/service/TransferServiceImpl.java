@@ -93,8 +93,9 @@ public class TransferServiceImpl implements TransferService {
         var response = transferOutputMapper.toTransferOutputDTO(saveTransfer);
 
         idempotencyRecord.setResponseData(objectMapper.valueToTree(response));
-        JsonNode jsonNode = objectMapper.valueToTree(new EventTransferPayload(saveTransfer.getFromWalletId(), saveTransfer.getToWalletId(), saveTransfer.getAmount()));
-        EventTransfer eventTransfer = new EventTransfer(EventTransferType.TRANSFER_COMPLETE, saveTransfer.getId(), jsonNode);
+        UUID evenId = UUID.randomUUID();
+        JsonNode jsonNode = objectMapper.valueToTree(new EventTransferPayload(evenId, saveTransfer.getFromWalletId(), saveTransfer.getToWalletId(), saveTransfer.getAmount()));
+        EventTransfer eventTransfer = new EventTransfer(evenId, EventTransferType.TRANSFER_COMPLETE, saveTransfer.getId(), jsonNode);
         eventTransferRepository.save(eventTransfer);
         return response;
 

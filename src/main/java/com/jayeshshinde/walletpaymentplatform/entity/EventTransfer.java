@@ -9,17 +9,17 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.domain.Persistable;
 import tools.jackson.databind.JsonNode;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-public class EventTransfer {
+public class EventTransfer implements Persistable<UUID> {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @Enumerated(EnumType.STRING)
     private EventTransferType eventType;
@@ -30,13 +30,16 @@ public class EventTransfer {
     private JsonNode payload;
     private int attempts;
     private String lastError;
-    private LocalDateTime claimedExpiry;
+    private Instant claimedExpiry;
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
+    @Transient
+    private boolean isNew = true;
 
-    public EventTransfer(EventTransferType eventType, UUID transferId, JsonNode payload) {
+    public EventTransfer(UUID id, EventTransferType eventType, UUID transferId, JsonNode payload) {
+        this.id = id;
         this.eventType = eventType;
         this.transferId = transferId;
         this.payload = payload;
@@ -98,5 +101,16 @@ public class EventTransfer {
 
     public void clearClaimedExpiry() {
         this.claimedExpiry = null;
+    }
+
+    @Override
+    public boolean isNew() {
+        return this.isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false; // Prevents subsequent saves from breaking
     }
 }
