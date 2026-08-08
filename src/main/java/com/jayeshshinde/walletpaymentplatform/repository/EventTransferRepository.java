@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface EventTransferRepository extends JpaRepository<EventTransfer, UUID> {
     @Query(value = "SELECT * " +
             "FROM event_transfer et " + // Note: Use native snake_case table name
-            "WHERE et.status = 'PENDING' " +
+            "WHERE NOW()>et.not_eligible_before AND (et.status = 'PENDING') " +
             "OR (et.status = 'CLAIMED' AND et.claimed_expiry < :now) " +
             "ORDER BY et.created_at ASC " +
             "LIMIT :batchSize " +      // Crucial for queue processing

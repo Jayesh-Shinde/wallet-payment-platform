@@ -14,6 +14,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Entity
 @Getter
@@ -35,8 +36,17 @@ public class EventTransfer implements Persistable<UUID> {
     private Instant createdAt;
     @UpdateTimestamp
     private Instant updatedAt;
+    @CreationTimestamp
+    private Instant notEligibleBefore;
     @Transient
     private boolean isNew = true;
+    //Why @Transient is Unnecessary
+    //JPA specifications state that all static and final fields are automatically ignored by the persistence provider.
+    // static fields belong to the class, not to an individual database row instance.
+    // final fields cannot be modified after object construction, which breaks JPA's hydration mechanism.
+    private static final long BASE_DELAY_MS = 5000;   // 5s — must clear the 2s poll noise floor
+    private static final int MULTIPLIER = 3;
+    private static final long JITTER_MS = 1000;
 
     public EventTransfer(UUID id, EventTransferType eventType, UUID transferId, JsonNode payload) {
         this.id = id;
@@ -45,6 +55,7 @@ public class EventTransfer implements Persistable<UUID> {
         this.payload = payload;
         this.status = EventTransferStatus.PENDING;
         this.attempts = 0;
+        this.notEligibleBefore = Instant.now();
     }
 
     public void setLastError(String lastError) {
@@ -95,6 +106,9 @@ public class EventTransfer implements Persistable<UUID> {
             this.status = EventTransferStatus.DEAD_LETTER;
         } else {
             this.status = EventTransferStatus.PENDING;
+            this.notEligibleBefore = Instant.now()
+                    .plusMillis((long) (BASE_DELAY_MS * Math.pow(MULTIPLIER, this.attempts)))
+                    .plusMillis(ThreadLocalRandom.current().nextLong(0, JITTER_MS));
         }
         this.claimedExpiry = null;
     }
