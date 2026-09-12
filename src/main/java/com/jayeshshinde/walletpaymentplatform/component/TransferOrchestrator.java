@@ -16,6 +16,7 @@ import java.util.UUID;
 public class TransferOrchestrator {
     private final IdempotencyService idempotencyService;
     private final ObjectMapper objectMapper;
+    // added for test private final JsonMapper jsonMapper;
     private final TransferRetryFacade transferRetryFacade;
 
     public TransferOutputDTO createTransfer(@Valid TransferInputDTO transferInputDTO, UUID idempotencyKey) {
@@ -27,6 +28,7 @@ public class TransferOrchestrator {
             if (jsonNode == null) {
                 throw new ReplayNotReadyException("this exact operation is still in flight — wait and retry the same key ");
             }
+            // added for test   TransferOutputDTO transferOutputDTO = jsonMapper.treeToValue(jsonNode, TransferOutputDTO.class);
             return objectMapper.treeToValue(jsonNode, TransferOutputDTO.class);
         }
     }
