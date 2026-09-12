@@ -21,7 +21,8 @@ public class IdempotencyService {
         try {
             IdempotencyRecord item = new IdempotencyRecord(idempotencyKey);
             idempotencyRecordRepository.save(item);
-            idempotencyRecordRepository.flush();
+            idempotencyRecordRepository.flush();// this makes insert instant not at boundary when method return
+            // so if any exception we catch in here
         } catch (DataIntegrityViolationException e) {
             throw new IdempotencyKeyConflictException(e.getMessage());
         }
